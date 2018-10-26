@@ -1,9 +1,10 @@
 package fintech.homework05
 
 import java.time.Instant
-import java.util.UUID
+import java.util.{NoSuchElementException, UUID}
 
 import scala.util.matching.Regex
+import java.util.NoSuchElementException
 
 /**
   * Вам необходимо реализовать api для создания твиттов, получения твитта и лайка твитта
@@ -44,24 +45,29 @@ sealed trait Result[T]
 final case class Success[T](value: T) extends Result[T]
 final case class Error[T](message: String) extends Result[T]
 
-trait TweetStorage {
-  var storage: Seq[Tweet] = Seq[Tweet]()
+trait TweetStorage
+class InMemoryStorage extends TweetStorage {
+  var storage: Map[String, Tweet] = Map[String, Tweet]()
   def add(t: Tweet){
-    storage = storage :+ t
+    storage = storage + (t.id -> t)
   }
   def get(id:String): Tweet = {
-    storage.filter(t => t.id == id).head
+    storage(id)
   }
   def like(id:String): Int = {
-    var t = storage.filter(t => t.id == id).head
-    val index = storage.indexOf(t)
-    val newT = Tweet(t.id, t.user, t.text, t.hashTags, t.createdAt, t.likes+1)
-    storage.patch(index, Seq(newT), 1)
-    newT.likes
+    try {
+      var t = storage(id)
+      val newT = t.copy(likes = t.likes+1)
+      storage + (id->newT)
+      newT.likes
+    }
+    catch {
+      case e: java.util.NoSuchElementException => 0
+    }
   }
 }
 
-class TwitterApi(storage: TweetStorage) {
+class TwitterApi(storage: InMemoryStorage) {
 
   def getHashtags(text: String): Seq[String] = {
     val hashtagPttrn: Regex = "#[0-9a-zA-Z]+".r
@@ -93,14 +99,13 @@ class TwitterApi(storage: TweetStorage) {
     val likes = storage.like(request.id)
     likes match {
         case likes: Int => Success(likes)
-        case _ =>  Error("Unable To Get Likes!")
       }
   }
 }
 
 object TweetApiExample extends App {
 
-  val storage: TweetStorage = new TweetStorage {}
+  val storage: InMemoryStorage = new InMemoryStorage {}
   val app = new TwitterApi(storage)
 
   val request = CreateTweetRequest(user = "me", text = "Hello, world!")
