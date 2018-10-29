@@ -1,5 +1,4 @@
 package fintech.homework05
-import fintech.homework05.TweetApiExample.response
 import org.scalatest.{FlatSpec, Matchers}
 
 class TweetAppSpec extends FlatSpec with Matchers {

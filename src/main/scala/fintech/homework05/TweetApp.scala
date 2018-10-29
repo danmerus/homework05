@@ -45,14 +45,22 @@ sealed trait Result[T]
 final case class Success[T](value: T) extends Result[T]
 final case class Error[T](message: String) extends Result[T]
 
-trait TweetStorage
+trait TweetStorage {
+  def add(t:Tweet):Unit
+  def get(id:String): Option[Tweet]
+  def like(id:String): Int
+}
+
 class InMemoryStorage extends TweetStorage {
-  var storage: Map[String, Tweet] = Map[String, Tweet]()
+  private var storage: Map[String, Tweet] = Map[String, Tweet]()
+  def getSize:Int = {
+    storage.size
+  }
   def add(t: Tweet){
     storage = storage + (t.id -> t)
   }
-  def get(id:String): Tweet = {
-    storage(id)
+  def get(id:String): Option[Tweet] = {
+    storage.get(id)
   }
   def like(id:String): Int = {
     try {
@@ -88,31 +96,29 @@ class TwitterApi(storage: InMemoryStorage) {
   }
 
   def getTweet(request: GetTweetRequest): Result[Tweet] = {
-    val t = storage.get(request.id)
+    val t:Option[Tweet] = storage.get(request.id)
     t match {
-      case t:Tweet =>  Success(t)
-      case _ =>  Error("Unable To Get Tweet!")
+      case Some(t) =>  Success(t)
+      case None =>  Error("Unable To Get Tweet!")
     }
   }
 
   def likeTweet(request: LikeRequest): Result[Int] = {
     val likes = storage.like(request.id)
-    likes match {
-        case likes: Int => Success(likes)
-      }
+    Success(likes)
   }
 }
 
 object TweetApiExample extends App {
 
-  val storage: InMemoryStorage = new InMemoryStorage {}
-  val app = new TwitterApi(storage)
-
-  val request = CreateTweetRequest(user = "me", text = "Hello, world!")
-
-  val response = app.createTweet(request)
-  response match {
-    case Success(value) => println(s"Created tweet with id: ${value.id}")
-    case Error(message) => println(s"Failed to create tweet: $message")
-  }
+//  val storage: InMemoryStorage = new InMemoryStorage {}
+//  val app = new TwitterApi(storage)
+//
+//  val request = CreateTweetRequest(user = "me", text = "Hello, world!")
+//
+//  val response = app.createTweet(request)
+//  response match {
+//    case Success(value) => println(s"Created tweet with id: ${value.id}")
+//    case Error(message) => println(s"Failed to create tweet: $message")
+//  }
 }
